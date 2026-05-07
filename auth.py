@@ -30,11 +30,6 @@ def check_login():
             user_data = res.data[0]
             st.session_state.user_info = user_data
             st.session_state.logged_in = True
-            
-            # Clear token from URL for a clean browser bar
-            st.query_params.clear()
-            # Set standalone true if it was in the original link
-            st.query_params["standalone"] = "true"
             st.rerun()
         else:
             st.error("Invalid or expired access link.")
