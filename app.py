@@ -118,6 +118,9 @@ st.markdown(f"""
  </style>
 """, unsafe_allow_html=True)
 
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "Home"
+    
 # 2. Authentication
 check_login()
 
