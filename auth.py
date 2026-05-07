@@ -12,6 +12,8 @@ def check_login():
     # 1. Initialize Cookie Manager & Session States
     # CookieManager must be initialized early to handle the component handshake
     cookie_manager = CookieManager()
+
+    time.sleep(0.5)
     
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
