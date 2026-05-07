@@ -8,28 +8,35 @@ from extra_streamlit_components import CookieManager
 from st_supabase_connection import SupabaseConnection
 import streamlit.components.v1 as components
 
-def detect_standalone():
+def get_browser_fingerprint():
     """
-    Simpler JS detection to avoid API Exceptions. 
-    Returns the raw value from the component.
+    Dumps all attributes to the screen so we can find the standalone signature.
     """
     js_code = """
     <script>
-    function sendStatus() {
-        const isiOS = window.navigator.standalone === true;
-        const isPWA = window.matchMedia('(display-mode: standalone)').matches;
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    function sendDetails() {
+        const data = {
+            isiOSStandalone: window.navigator.standalone === true,
+            isDisplayStandalone: window.matchMedia('(display-mode: standalone)').matches,
+            userAgent: navigator.userAgent,
+            windowWidth: window.innerWidth,
+            windowHeight: window.innerHeight,
+            screenWidth: window.screen.width,
+            screenHeight: window.screen.height,
+            isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent),
+            onTouch: (('ontouchstart' in window) || (navigator.maxTouchPoints > 0))
+        };
         
-        // Return a simple boolean
-        const status = isiOS || (isPWA && isMobile);
-        
+        // Logical detection: true standalone apps have no browser UI height
+        const isLikelyStandalone = data.isiOSStandalone || (data.isDisplayStandalone && data.isMobile);
+
         window.parent.postMessage({
             type: 'streamlit:setComponentValue',
-            value: status
+            value: { status: isLikelyStandalone, raw: data }
         }, '*');
     }
-    sendStatus();
-    setTimeout(sendStatus, 300);
+    sendDetails();
+    setTimeout(sendDetails, 500);
     </script>
     """
     return components.html(js_code, height=0, width=0)
@@ -42,26 +49,29 @@ def check_login():
     
     conn = st.connection("supabase", type=SupabaseConnection)
 
-    # 1. Wait for Cookie Manager to be ready
+    # 1. Cookie Handshake
     cookies = cookie_manager.get_all()
     if cookies is None:
-        st.spinner("Initializing...")
         st.stop()
 
-    # 2. Standalone Detection (Safe Handling)
-    is_standalone_val = detect_standalone()
+    # 2. Browser Fingerprint Check
+    fingerprint_data = get_browser_fingerprint()
     
-    # Give the JS component a moment to report back on first load
-    if is_standalone_val is None:
-        if "init_wait" not in st.session_state:
+    # Defensive handshake for the component
+    if fingerprint_data is None:
+        if "fp_wait" not in st.session_state:
             time.sleep(0.5)
-            st.session_state.init_wait = True
+            st.session_state.fp_wait = True
             st.rerun()
     
-    is_standalone = bool(is_standalone_val)
+    is_standalone = False
+    raw_debug = {}
+    if fingerprint_data:
+        is_standalone = fingerprint_data.get("status", False)
+        raw_debug = fingerprint_data.get("raw", {})
 
-    # 3. Check for existing "Sticky" Cookie
-    saved_code = cookies.get("qsc_beer_code")
+    # 3. Sticky Cookie Check
+    saved_code = cookies.get("qsc_beer_token")
     if saved_code and not st.session_state.logged_in:
         res = conn.table("users").select("*").eq("token", str(saved_code)).execute()
         if res.data:
@@ -69,13 +79,14 @@ def check_login():
             st.session_state.logged_in = True
             return st.session_state.user_info
 
-    # 4. UI Logic
+    # 4. UI Rendering
     if not st.session_state.logged_in:
         st.title("🍺 QSC Beer Tracker")
         
-        # Debugging expander
-        with st.expander("🛠️ Connection Debug"):
-            st.write(f"Standalone Mode: **{is_standalone}**")
+        # --- THE FULL BROWSER DUMP ---
+        with st.expander("🛠️ DBA Browser Profile Dump"):
+            st.write(f"**Calculated Standalone:** {is_standalone}")
+            st.json(raw_debug) # This is the data we need to see
             override = st.toggle("PC Test Mode (Bypass)")
             if st.button("Clear Session"):
                 st.session_state.clear()
@@ -83,8 +94,7 @@ def check_login():
 
         if not (is_standalone or override):
             st.info("### 📱 Installation Required")
-            st.write("Please add this app to your home screen to log in.")
-            st.markdown("1. Tap **Share** (iOS) or **Menu** (Android)\n2. Select **'Add to Home Screen'**")
+            st.write("To log in, please add this app to your home screen first.")
             st.stop()
 
         # --- LOGIN FORM ---
@@ -107,8 +117,8 @@ def check_login():
 
                         try:
                             yag = yagmail.SMTP("justin.moulton@gmail.com", "ocsr ngmx wzla uwau")
-                            yag.send(to=email_input, subject="Beer Tracker Code", contents=f"Your code: {code}")
-                            st.success("Check your email!")
+                            yag.send(to=email_input, subject="Your Code", contents=f"Code: {code}")
+                            st.success("Verification code sent!")
                             st.session_state.show_code_input = True
                             st.rerun()
                         except Exception as e:
@@ -116,20 +126,20 @@ def check_login():
                     else:
                         st.error("Email not found.")
         else:
-            code_in = st.text_input("6-Digit Code")
-            if st.button("Confirm and Log In"):
+            code_in = st.text_input("Enter 6-Digit Code")
+            if st.button("Confirm Code"):
                 res = conn.table("users").select("*").eq("email", email_input).eq("token", code_in).execute()
                 if res.data:
                     st.session_state.user_info = res.data[0]
                     st.session_state.logged_in = True
                     
-                    # FINAL FIX: Use a clear datetime object for expiry
-                    # This prevents the AttributeError: isoformat
+                    # COOKIE FIX: Pre-format the date to avoid the isoformat() error
                     try:
-                        expire_at = datetime.now() + timedelta(days=90)
-                        cookie_manager.set("qsc_beer_code", str(code_in), expires_at=expire_at)
-                    except:
-                        pass # Fallback if cookie fails so login still works
+                        # We use a 90-day expiry
+                        future_date = datetime.now() + timedelta(days=90)
+                        cookie_manager.set("qsc_beer_token", str(code_in), expires_at=future_date)
+                    except Exception as e:
+                        st.warning(f"Cookie could not be set, but you are logged in. Error: {e}")
                     
                     st.rerun()
                 else:
