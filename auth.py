@@ -12,8 +12,6 @@ def check_login():
     # 1. Initialize Cookie Manager & Session States
     # CookieManager must be initialized early to handle the component handshake
     cookie_manager = CookieManager()
-
-    time.sleep(0.5)
     
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
@@ -24,6 +22,14 @@ def check_login():
     # 2. Establish Supabase Connection
     conn = st.connection("supabase", type=SupabaseConnection)
 
+    # The component needs a moment to initialize; if cookies are None, we wait
+    cookies = cookie_manager.get_all()
+    
+    # If the component hasn't reported back yet, stop execution and let it retry
+    if cookies is None:
+        st.info("🔄 Connecting to secure session...")
+        st.stop()
+        
     # 3. Handling Authentication (Token vs Cookie)
     query_params = st.query_params.to_dict()
     url_token = query_params.get("token")
