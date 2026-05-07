@@ -119,7 +119,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 if "current_page" not in st.session_state:
-    st.session_state.current_page = "Home"
+    st.session_state.current_page = "Dashboard"
     
 # 2. Authentication
 check_login()
