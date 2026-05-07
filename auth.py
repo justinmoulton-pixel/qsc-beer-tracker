@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import yagmail
 import random
+import time
 from datetime import datetime, timedelta
 from extra_streamlit_components import CookieManager
 from st_supabase_connection import SupabaseConnection
@@ -9,12 +10,12 @@ import streamlit.components.v1 as components
 
 def detect_standalone():
     """
-    Injects JS to detect if the app is in standalone mode 
-    and reports it back to st.session_state.is_standalone
+    Improved detection with a handshake. 
+    Returns True/False only when the browser responds.
     """
     js_code = """
     <script>
-    function checkStandalone() {
+    function check() {
         const isInWebAppiOS = window.navigator.standalone === true;
         const isInWebAppChrome = window.matchMedia('(display-mode: standalone)').matches;
         const isStandalone = isInWebAppiOS || isInWebAppChrome;
@@ -24,25 +25,26 @@ def detect_standalone():
             value: isStandalone
         }, '*');
     }
-    // Run immediately and after a small delay to ensure handshake
-    checkStandalone();
-    setTimeout(checkStandalone, 200);
+    check();
+    // Persistent check to ensure the value gets through
+    setInterval(check, 500);
     </script>
     """
-    # This creates a hidden 0px iframe to run the detection
+    # Create the component
     res = components.html(js_code, height=0, width=0)
     
-    # Update session state based on JS return
-    if res is not None:
+    # If the JS hasn't reported yet, we wait briefly
+    if res is None:
+        if "is_standalone" not in st.session_state:
+            # First run: pause a moment to let JS talk to Python
+            time.sleep(0.5)
+            st.rerun()
+    else:
         st.session_state.is_standalone = res
-    elif "is_standalone" not in st.session_state:
-        # Default to False until JS reports back
-        st.session_state.is_standalone = False
 
 def check_login():
-    # 1. Initialize Components & Detect Mode
+    # 1. Initialize Components
     cookie_manager = CookieManager()
-    detect_standalone()
     
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
@@ -52,12 +54,18 @@ def check_login():
     # 2. Defensive Handshake for Cookies
     cookies = cookie_manager.get_all()
     if cookies is None:
-        with st.spinner("Connecting..."):
+        with st.spinner("Initializing..."):
             st.stop()
 
-    # 3. Check for existing "Sticky" Cookie
-    saved_code = cookies.get("qsc_beer_code")
+    # 3. Detect Standalone Mode
+    detect_standalone()
     
+    # Safety: If detect_standalone is still cycling, stop here
+    if "is_standalone" not in st.session_state:
+        st.stop()
+
+    # 4. Check for existing "Sticky" Cookie
+    saved_code = cookies.get("qsc_beer_code")
     if saved_code and not st.session_state.logged_in:
         res = conn.table("users").select("*").eq("token", saved_code).execute()
         if res.data:
@@ -65,88 +73,82 @@ def check_login():
             st.session_state.logged_in = True
             return st.session_state.user_info
 
-    # 4. The UI Logic
+    # 5. UI Logic
     if not st.session_state.logged_in:
         st.title("🍺 QSC Beer Tracker")
         
-        # GATEKEEPER: Check if they are in the browser or the Home Screen
         if not st.session_state.is_standalone:
-            # BROWSER MODE: Show instructions ONLY
+            # --- BROWSER MODE ---
             st.info("### 📱 Installation Required")
-            st.write("To use the Beer Tracker, you must first add it to your home screen:")
+            st.write("To log in, you must add this app to your home screen first.")
             
-            st.markdown("""
-            1. **iOS (Safari):** Tap the **Share** button (box with arrow) and select **'Add to Home Screen'**.
-            2. **Android (Chrome):** Tap the **Menu** (three dots) and select **'Install app'** or **'Add to Home Screen'**.
+            # Use columns for a cleaner look on mobile
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**iPhone (Safari)**\n1. Tap 'Share'\n2. 'Add to Home Screen'")
+            with col2:
+                st.markdown("**Android (Chrome)**\n1. Tap 'Menu' (⋮)\n2. 'Install app'")
             
-            **Once added, close this browser tab and open the 'Beer Tracker' app from your home screen to verify your account.**
-            """)
-            
-            # For debugging/testing, you can add a temporary button here to bypass
-            # if st.button("Developer Bypass (Browser Mode)"):
-            #     st.session_state.is_standalone = True
-            #     st.rerun()
-            
-            st.stop() # Stops execution so login form never shows in Safari/Chrome
-            
-        else:
-            # STANDALONE MODE: Show the Verification Flow
-            st.success("✅ Home Screen Mode Detected")
-            email_input = st.text_input("Enter your email").strip().lower()
-            
-            if "show_code_input" not in st.session_state:
-                st.session_state.show_code_input = False
-
-            if not st.session_state.show_code_input:
-                if st.button("Verify Email"):
-                    if email_input:
-                        res = conn.table("users").select("*").eq("email", email_input).execute()
-                        if res.data:
-                            user = res.data[0]
-                            existing_code = user.get('token')
-                            
-                            if not existing_code or len(str(existing_code)) > 6:
-                                new_code = str(random.randint(100000, 999999))
-                                conn.table("users").update({"token": new_code}).eq("email", email_input).execute()
-                                final_code = new_code
-                            else:
-                                final_code = existing_code
-
-                            try:
-                                yag = yagmail.SMTP("justin.moulton@gmail.com", "ocsr ngmx wzla uwau")
-                                yag.send(
-                                    to=email_input,
-                                    subject="Your Beer Tracker Access Code",
-                                    contents=f"Your 6-digit access code is: {final_code}"
-                                )
-                                st.success(f"Verification code sent to {email_input}!")
-                                st.session_state.show_code_input = True
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Error sending email: {e}")
-                        else:
-                            st.error("Email not found in league records.")
-            
+            # Temporary Bypass for the Admin (You)
+            if st.toggle("Admin Bypass (Show login anyway)"):
+                pass 
             else:
-                code_input = st.text_input("Enter 6-Digit Code", placeholder="123456")
-                if st.button("Confirm Code"):
-                    res = conn.table("users").select("*").eq("email", email_input).eq("token", code_input).execute()
-                    
+                st.stop()
+        
+        # --- STANDALONE MODE (LOGIN FORM) ---
+        st.success("✅ Home Screen Mode Detected")
+        email_input = st.text_input("Enter your email").strip().lower()
+        
+        if "show_code_input" not in st.session_state:
+            st.session_state.show_code_input = False
+
+        if not st.session_state.show_code_input:
+            if st.button("Verify Email"):
+                if email_input:
+                    res = conn.table("users").select("*").eq("email", email_input).execute()
                     if res.data:
-                        st.session_state.user_info = res.data[0]
-                        st.session_state.logged_in = True
+                        user = res.data[0]
+                        existing_code = user.get('token')
                         
-                        expiry = datetime.now() + timedelta(days=90)
-                        cookie_manager.set("qsc_beer_code", code_input, expires_at=expiry)
-                        
-                        st.success("Success! Loading Dashboard...")
-                        st.rerun()
+                        if not existing_code or len(str(existing_code)) > 6:
+                            new_code = str(random.randint(100000, 999999))
+                            conn.table("users").update({"token": new_code}).eq("email", email_input).execute()
+                            final_code = new_code
+                        else:
+                            final_code = existing_code
+
+                        try:
+                            yag = yagmail.SMTP("justin.moulton@gmail.com", "ocsr ngmx wzla uwau")
+                            yag.send(
+                                to=email_input,
+                                subject="Your Beer Tracker Access Code",
+                                contents=f"Your 6-digit access code is: {final_code}"
+                            )
+                            st.success(f"Verification code sent to {email_input}!")
+                            st.session_state.show_code_input = True
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error sending email: {e}")
                     else:
-                        st.error("Invalid code. Please try again.")
+                        st.error("Email not found in league records.")
+        
+        else:
+            code_input = st.text_input("Enter 6-Digit Code", placeholder="123456")
+            if st.button("Confirm Code"):
+                res = conn.table("users").select("*").eq("email", email_input).eq("token", code_input).execute()
                 
-                if st.button("Back"):
-                    st.session_state.show_code_input = False
+                if res.data:
+                    st.session_state.user_info = res.data[0]
+                    st.session_state.logged_in = True
+                    expiry = datetime.now() + timedelta(days=90)
+                    cookie_manager.set("qsc_beer_code", code_input, expires_at=expiry)
                     st.rerun()
+                else:
+                    st.error("Invalid code.")
+            
+            if st.button("Back"):
+                st.session_state.show_code_input = False
+                st.rerun()
 
     if st.session_state.logged_in:
         return st.session_state.user_info
