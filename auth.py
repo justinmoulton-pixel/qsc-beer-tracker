@@ -19,17 +19,23 @@ def check_login():
     conn = st.connection("supabase", type=SupabaseConnection)
 
     # 3. Handle incoming Token from URL
-    url_token = st.query_params.get("token")
+    # We use .to_dict() to ensure we have a stable look at the params
+    query_params = st.query_params.to_dict()
+    url_token = query_params.get("token")
     
     if url_token and not st.session_state.logged_in:
-        # Query Supabase users table (using lowercase column names as per Postgres standard)
         res = conn.table("users").select("*").eq("token", url_token).execute()
         
         if res.data:
-            # User found in Supabase
-            user_data = res.data[0]
-            st.session_state.user_info = user_data
+            # User verified!
+            st.session_state.user_info = res.data[0]
             st.session_state.logged_in = True
+            
+            # Instead of a blind rerun, we explicitly keep the token in the params
+            # This forces the browser to keep the full URL string visible
+            st.query_params["token"] = url_token
+            st.query_params["standalone"] = "true"
+            
             st.rerun()
         else:
             st.error("Invalid or expired access link.")
