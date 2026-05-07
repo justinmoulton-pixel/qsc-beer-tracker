@@ -25,7 +25,7 @@ def check_login():
     cookies = cookie_manager.get_all()
     
     # If the component hasn't reported back yet, stop execution and let it retry
-     if cookies is None:
+    if cookies is None:
         # We show a clean spinner instead of an AttributeError
         with st.spinner("Authenticating..."):
             st.stop()
