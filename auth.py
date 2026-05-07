@@ -64,7 +64,7 @@ def check_login():
                 token = user_record.get('token')
                 
                 # UPDATE THIS URL after you deploy to Streamlit Cloud
-                base_url = "https://your-app-name.streamlit.app" 
+                base_url = "https://qsc-beer-tracker.streamlit.app/" 
                 # For local testing, you can use: base_url = "http://localhost:8501"
                 
                 link = f"{base_url}/?token={token}&standalone=true"
