@@ -9,7 +9,6 @@ def check_is_standalone():
     return st.query_params.get("standalone") == "true"
 
 def check_login():
-    # 1. Initialize Cookie Manager & Session States
     # CookieManager must be initialized early to handle the component handshake
     cookie_manager = CookieManager()
     
@@ -26,9 +25,10 @@ def check_login():
     cookies = cookie_manager.get_all()
     
     # If the component hasn't reported back yet, stop execution and let it retry
-    if cookies is None:
-        st.info("🔄 Connecting to secure session...")
-        st.stop()
+ if cookies is None:
+        # We show a clean spinner instead of an AttributeError
+        with st.spinner("Authenticating..."):
+            st.stop()
         
     # 3. Handling Authentication (Token vs Cookie)
     query_params = st.query_params.to_dict()
