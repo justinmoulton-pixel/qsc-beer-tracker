@@ -2,43 +2,9 @@ import streamlit as st
 import pandas as pd
 import yagmail
 import random
-import time
 from datetime import datetime, timedelta
 from extra_streamlit_components import CookieManager
 from st_supabase_connection import SupabaseConnection
-import streamlit.components.v1 as components
-
-def get_browser_fingerprint():
-    """
-    Injects JS to pull browser attributes.
-    """
-    js_code = """
-    <script>
-    function sendDetails() {
-        const data = {
-            isiOSStandalone: window.navigator.standalone === true,
-            isDisplayStandalone: window.matchMedia('(display-mode: standalone)').matches,
-            userAgent: navigator.userAgent,
-            windowWidth: window.innerWidth,
-            windowHeight: window.innerHeight,
-            isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent),
-            menubarVisible: window.menubar ? window.menubar.visible : "unknown"
-        };
-        
-        // Logical detection
-        const isLikelyStandalone = data.isiOSStandalone || (data.isDisplayStandalone && data.isMobile);
-
-        window.parent.postMessage({
-            type: 'streamlit:setComponentValue',
-            value: { status: isLikelyStandalone, raw: data }
-        }, '*');
-    }
-    sendDetails();
-    // Repeating to ensure the message hits the parent
-    setTimeout(sendDetails, 500);
-    </script>
-    """
-    return components.html(js_code, height=0, width=0)
 
 def check_login():
     cookie_manager = CookieManager()
@@ -48,32 +14,32 @@ def check_login():
     
     conn = st.connection("supabase", type=SupabaseConnection)
 
-    # 1. Cookie Handshake
+    # 1. Wait for Cookie Manager
     cookies = cookie_manager.get_all()
     if cookies is None:
         st.stop()
 
-    # 2. Safe Component Handling
-    # This is where the error was happening. We MUST check if it's None first.
-    fingerprint_component = get_browser_fingerprint()
-    
-    is_standalone = False
-    raw_debug = {}
+    # 2. Inject CSS for Standalone Detection
+    # This CSS hides the "instruction" div and shows the "login" div 
+    # ONLY when display-mode is standalone.
+    st.markdown("""
+        <style>
+        #instruction-section { display: block; }
+        #login-section { display: none; }
 
-    if fingerprint_component is not None:
-        # Check if it's a dict before calling .get()
-        if isinstance(fingerprint_component, dict):
-            is_standalone = fingerprint_component.get("status", False)
-            raw_debug = fingerprint_component.get("raw", {})
-    else:
-        # If it's None, we wait once and rerun to give JS time to talk back
-        if "retry_count" not in st.session_state:
-            st.session_state.retry_count = 0
-            
-        if st.session_state.retry_count < 2:
-            st.session_state.retry_count += 1
-            time.sleep(0.5)
-            st.rerun()
+        @media (display-mode: standalone), (display-mode: fullscreen) {
+            #instruction-section { display: none !important; }
+            #login-section { display: block !important; }
+        }
+        /* iOS Specific Check */
+        @supports (-webkit-touch-callout: none) {
+            @media (display-mode: standalone) {
+                #instruction-section { display: none !important; }
+                #login-section { display: block !important; }
+            }
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
     # 3. Sticky Cookie Check
     saved_code = cookies.get("qsc_beer_token")
@@ -84,30 +50,37 @@ def check_login():
             st.session_state.logged_in = True
             return st.session_state.user_info
 
-    # 4. UI Rendering
+    # 4. UI Logic
     if not st.session_state.logged_in:
         st.title("🍺 QSC Beer Tracker")
-        
-        # --- THE FULL BROWSER DUMP ---
-        with st.expander("🛠️ DBA Browser Profile Dump"):
-            st.write(f"**Calculated Standalone:** {is_standalone}")
-            if raw_debug:
-                st.json(raw_debug)
-            else:
-                st.write("Waiting for browser data...")
-            
-            override = st.toggle("PC Test Mode (Bypass)")
-            if st.button("Hard Reset Session"):
+
+        # --- THE PC BYPASS (For your development) ---
+        with st.expander("🛠️ Admin Tools"):
+            override = st.toggle("PC Test Mode (Show Login)")
+            if st.button("Clear Session"):
                 st.session_state.clear()
                 st.rerun()
 
-        if not (is_standalone or override):
+        # If you are on PC testing, we skip the fancy CSS toggle
+        if override:
+            st.success("Admin Bypass Active")
+        
+        # --- WRAPPER DIVS ---
+        # The CSS above controls which of these two 'divs' is visible
+        
+        # 1. The Instruction Section (Visible in Browser)
+        if not override:
+            st.markdown('<div id="instruction-section">', unsafe_allow_html=True)
             st.info("### 📱 Installation Required")
-            st.write("To log in, please add this app to your home screen first.")
-            st.stop()
+            st.write("To log in, add this app to your home screen.")
+            st.markdown("1. Tap **Share** or **Menu**\n2. Select **'Add to Home Screen'**")
+            st.markdown('</div>', unsafe_allow_html=True)
 
-        # --- LOGIN FORM ---
+        # 2. The Login Section (Visible in Standalone/Home Screen)
+        # We wrap the login form in a div that the CSS will 'display: block'
+        st.markdown('<div id="login-section">', unsafe_allow_html=True)
         st.success("✅ App Mode Active")
+        
         email_input = st.text_input("Enter your email").strip().lower()
         
         if "show_code_input" not in st.session_state:
@@ -143,12 +116,10 @@ def check_login():
                     st.session_state.logged_in = True
                     
                     try:
-                        # Fixed date handling
                         exp = datetime.now() + timedelta(days=90)
                         cookie_manager.set("qsc_beer_token", str(code_in), expires_at=exp)
                     except:
                         pass
-                    
                     st.rerun()
                 else:
                     st.error("Invalid code.")
@@ -156,6 +127,8 @@ def check_login():
             if st.button("Back"):
                 st.session_state.show_code_input = False
                 st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
 
     if st.session_state.logged_in:
         return st.session_state.user_info
