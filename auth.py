@@ -14,32 +14,15 @@ def check_login():
     
     conn = st.connection("supabase", type=SupabaseConnection)
 
-    # 1. Wait for Cookie Manager
+    # 1. Cookie Handshake
     cookies = cookie_manager.get_all()
     if cookies is None:
         st.stop()
 
-    # 2. Inject CSS for Standalone Detection
-    # This CSS hides the "instruction" div and shows the "login" div 
-    # ONLY when display-mode is standalone.
-    st.markdown("""
-        <style>
-        #instruction-section { display: block; }
-        #login-section { display: none; }
-
-        @media (display-mode: standalone), (display-mode: fullscreen) {
-            #instruction-section { display: none !important; }
-            #login-section { display: block !important; }
-        }
-        /* iOS Specific Check */
-        @supports (-webkit-touch-callout: none) {
-            @media (display-mode: standalone) {
-                #instruction-section { display: none !important; }
-                #login-section { display: block !important; }
-            }
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    # 2. Server-Side Environment Check
+    # We pull the User-Agent header to see if they are on mobile
+    user_agent = st.context.headers.get("User-Agent", "").lower()
+    is_mobile = any(x in user_agent for x in ["iphone", "android", "mobile"])
 
     # 3. Sticky Cookie Check
     saved_code = cookies.get("qsc_beer_token")
@@ -50,37 +33,31 @@ def check_login():
             st.session_state.logged_in = True
             return st.session_state.user_info
 
-    # 4. UI Logic
+    # 4. UI Rendering
     if not st.session_state.logged_in:
         st.title("🍺 QSC Beer Tracker")
 
-        # --- THE PC BYPASS (For your development) ---
         with st.expander("🛠️ Admin Tools"):
-            override = st.toggle("PC Test Mode (Show Login)")
+            # This is your manual "I am on my PC" toggle
+            is_dev_bypass = st.toggle("PC Development Mode", value=False)
             if st.button("Clear Session"):
                 st.session_state.clear()
                 st.rerun()
 
-        # If you are on PC testing, we skip the fancy CSS toggle
-        if override:
-            st.success("Admin Bypass Active")
-        
-        # --- WRAPPER DIVS ---
-        # The CSS above controls which of these two 'divs' is visible
-        
-        # 1. The Instruction Section (Visible in Browser)
-        if not override:
-            st.markdown('<div id="instruction-section">', unsafe_allow_html=True)
+        # LOGIC: If it's not mobile and not the dev bypass, show installation info
+        if not is_mobile and not is_dev_bypass:
             st.info("### 📱 Installation Required")
-            st.write("To log in, add this app to your home screen.")
-            st.markdown("1. Tap **Share** or **Menu**\n2. Select **'Add to Home Screen'**")
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.write("This app is designed to be used from your home screen.")
+            st.markdown("""
+            **How to install:**
+            1. Open this link on your phone.
+            2. Tap **Share** (iOS) or **Menu** (Android).
+            3. Select **'Add to Home Screen'**.
+            """)
+            st.stop() # This stops the script here so the email box won't show
 
-        # 2. The Login Section (Visible in Standalone/Home Screen)
-        # We wrap the login form in a div that the CSS will 'display: block'
-        st.markdown('<div id="login-section">', unsafe_allow_html=True)
+        # --- LOGIN FORM (Only reached if Mobile or Bypass is True) ---
         st.success("✅ App Mode Active")
-        
         email_input = st.text_input("Enter your email").strip().lower()
         
         if "show_code_input" not in st.session_state:
@@ -127,8 +104,6 @@ def check_login():
             if st.button("Back"):
                 st.session_state.show_code_input = False
                 st.rerun()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
 
     if st.session_state.logged_in:
         return st.session_state.user_info
