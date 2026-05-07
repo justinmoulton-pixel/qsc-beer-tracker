@@ -10,15 +10,22 @@ import streamlit.components.v1 as components
 
 def detect_standalone():
     """
-    Surgical JS detection that returns the value directly.
+    Surgical JS detection. Returns True only if the browser UI is hidden.
     """
     js_code = """
     <script>
     function check() {
+        // iOS Check
         const isiOS = window.navigator.standalone === true;
-        const isChrome = window.matchMedia('(display-mode: standalone)').matches;
-        // Check for common standalone modes
-        const status = (isiOS || isChrome);
+        
+        // Android/Chrome/Desktop Check:
+        // Checking for 'standalone' display mode AND ensuring we are on a mobile device
+        const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        // Final Status: Must be standalone mode AND a mobile device
+        // This prevents desktop browsers from triggering "True"
+        const status = isiOS || (isStandaloneMode && isMobile);
         
         window.parent.postMessage({
             type: 'streamlit:setComponentValue',
@@ -26,11 +33,9 @@ def detect_standalone():
         }, '*');
     }
     check();
-    // Keep checking in case of slow browser renders
     setTimeout(check, 500);
     </script>
     """
-    # This returns the value from the JS postMessage
     return components.html(js_code, height=0, width=0)
 
 def check_login():
@@ -48,19 +53,17 @@ def check_login():
             st.stop()
 
     # 2. Standalone Detection
-    # We get the value directly from the component rather than using session_state
     is_standalone_component = detect_standalone()
     
-    # If it's the very first load, give it a half-second to handshake
     if is_standalone_component is None:
-        time.sleep(0.5)
-        st.rerun()
-
-    # Convert the component return value to a boolean
-    # If the component is still loading, it might be an empty object or None
+        if "standalone_handshake_done" not in st.session_state:
+            time.sleep(0.5)
+            st.session_state.standalone_handshake_done = True
+            st.rerun()
+    
     is_standalone = bool(is_standalone_component)
 
-    # 3. Check for existing "Sticky" Cookie
+    # 3. Check for existing Cookie
     saved_code = cookies.get("qsc_beer_code")
     if saved_code and not st.session_state.logged_in:
         res = conn.table("users").select("*").eq("token", saved_code).execute()
@@ -73,19 +76,30 @@ def check_login():
     if not st.session_state.logged_in:
         st.title("🍺 QSC Beer Tracker")
         
-        # DEBUG: Temporary expander to see what's happening
+        # --- REFINED DEBUG CONSOLE ---
         with st.expander("🛠️ Connection Debug"):
-            st.write(f"Standalone Mode Detected: {is_standalone}")
-            if st.toggle("Override (Show Login Form)"):
-                is_standalone = True
+            st.write(f"Standalone Mode Detected: **{is_standalone}**")
+            # This toggle allows you to test the login form on your PC
+            override = st.toggle("Force Login Form (For PC Testing)")
+            if st.button("Reset Everything"):
+                st.session_state.clear()
+                st.rerun()
+        
+        # Use either the real check or your manual override
+        show_login = is_standalone or override
 
-        if not is_standalone:
+        if not show_login:
             st.info("### 📱 Installation Required")
-            st.write("To access the tracker, please add this page to your home screen.")
-            st.markdown("1. Tap **Share** (iOS) or **Menu** (Android)\n2. Select **'Add to Home Screen'**")
+            st.write("To use this app, please add it to your home screen first.")
+            st.markdown("""
+            **How to install:**
+            1. Tap the **Share** (iOS) or **Menu** (Android) button.
+            2. Select **'Add to Home Screen'**.
+            3. Open the app from the new icon on your home screen.
+            """)
             st.stop()
 
-        # --- LOGIN FORM (Only shown in Standalone) ---
+        # --- LOGIN FORM ---
         st.success("✅ App Mode Active")
         email_input = st.text_input("Enter your email").strip().lower()
         
@@ -105,8 +119,8 @@ def check_login():
 
                         try:
                             yag = yagmail.SMTP("justin.moulton@gmail.com", "ocsr ngmx wzla uwau")
-                            yag.send(to=email_input, subject="Your Beer Tracker Code", contents=f"Your code is: {code}")
-                            st.success("Code sent! Check your email.")
+                            yag.send(to=email_input, subject="Beer Tracker Code", contents=f"Your code: {code}")
+                            st.success("Verification code sent!")
                             st.session_state.show_code_input = True
                             st.rerun()
                         except Exception as e:
@@ -114,13 +128,13 @@ def check_login():
                     else:
                         st.error("Email not found.")
         else:
-            code_in = st.text_input("Enter 6-Digit Code")
+            code_in = st.text_input("6-Digit Code")
             if st.button("Confirm and Log In"):
                 res = conn.table("users").select("*").eq("email", email_input).eq("token", code_in).execute()
                 if res.data:
                     st.session_state.user_info = res.data[0]
                     st.session_state.logged_in = True
-                    # Set the sticky cookie
+                    # Stick the cookie
                     expiry = datetime.now() + timedelta(days=90)
                     cookie_manager.set("qsc_beer_code", code_in, expires_at=expiry)
                     st.rerun()
