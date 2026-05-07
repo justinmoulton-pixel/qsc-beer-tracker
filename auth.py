@@ -10,7 +10,7 @@ import streamlit.components.v1 as components
 
 def get_browser_fingerprint():
     """
-    Dumps all attributes to the screen so we can find the standalone signature.
+    Injects JS to pull browser attributes.
     """
     js_code = """
     <script>
@@ -21,13 +21,11 @@ def get_browser_fingerprint():
             userAgent: navigator.userAgent,
             windowWidth: window.innerWidth,
             windowHeight: window.innerHeight,
-            screenWidth: window.screen.width,
-            screenHeight: window.screen.height,
             isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent),
-            onTouch: (('ontouchstart' in window) || (navigator.maxTouchPoints > 0))
+            menubarVisible: window.menubar ? window.menubar.visible : "unknown"
         };
         
-        // Logical detection: true standalone apps have no browser UI height
+        // Logical detection
         const isLikelyStandalone = data.isiOSStandalone || (data.isDisplayStandalone && data.isMobile);
 
         window.parent.postMessage({
@@ -36,6 +34,7 @@ def get_browser_fingerprint():
         }, '*');
     }
     sendDetails();
+    // Repeating to ensure the message hits the parent
     setTimeout(sendDetails, 500);
     </script>
     """
@@ -54,21 +53,27 @@ def check_login():
     if cookies is None:
         st.stop()
 
-    # 2. Browser Fingerprint Check
-    fingerprint_data = get_browser_fingerprint()
-    
-    # Defensive handshake for the component
-    if fingerprint_data is None:
-        if "fp_wait" not in st.session_state:
-            time.sleep(0.5)
-            st.session_state.fp_wait = True
-            st.rerun()
+    # 2. Safe Component Handling
+    # This is where the error was happening. We MUST check if it's None first.
+    fingerprint_component = get_browser_fingerprint()
     
     is_standalone = False
     raw_debug = {}
-    if fingerprint_data:
-        is_standalone = fingerprint_data.get("status", False)
-        raw_debug = fingerprint_data.get("raw", {})
+
+    if fingerprint_component is not None:
+        # Check if it's a dict before calling .get()
+        if isinstance(fingerprint_component, dict):
+            is_standalone = fingerprint_component.get("status", False)
+            raw_debug = fingerprint_component.get("raw", {})
+    else:
+        # If it's None, we wait once and rerun to give JS time to talk back
+        if "retry_count" not in st.session_state:
+            st.session_state.retry_count = 0
+            
+        if st.session_state.retry_count < 2:
+            st.session_state.retry_count += 1
+            time.sleep(0.5)
+            st.rerun()
 
     # 3. Sticky Cookie Check
     saved_code = cookies.get("qsc_beer_token")
@@ -86,9 +91,13 @@ def check_login():
         # --- THE FULL BROWSER DUMP ---
         with st.expander("🛠️ DBA Browser Profile Dump"):
             st.write(f"**Calculated Standalone:** {is_standalone}")
-            st.json(raw_debug) # This is the data we need to see
+            if raw_debug:
+                st.json(raw_debug)
+            else:
+                st.write("Waiting for browser data...")
+            
             override = st.toggle("PC Test Mode (Bypass)")
-            if st.button("Clear Session"):
+            if st.button("Hard Reset Session"):
                 st.session_state.clear()
                 st.rerun()
 
@@ -133,13 +142,12 @@ def check_login():
                     st.session_state.user_info = res.data[0]
                     st.session_state.logged_in = True
                     
-                    # COOKIE FIX: Pre-format the date to avoid the isoformat() error
                     try:
-                        # We use a 90-day expiry
-                        future_date = datetime.now() + timedelta(days=90)
-                        cookie_manager.set("qsc_beer_token", str(code_in), expires_at=future_date)
-                    except Exception as e:
-                        st.warning(f"Cookie could not be set, but you are logged in. Error: {e}")
+                        # Fixed date handling
+                        exp = datetime.now() + timedelta(days=90)
+                        cookie_manager.set("qsc_beer_token", str(code_in), expires_at=exp)
+                    except:
+                        pass
                     
                     st.rerun()
                 else:
