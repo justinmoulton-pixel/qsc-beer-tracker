@@ -10,21 +10,18 @@ import streamlit.components.v1 as components
 
 def detect_standalone():
     """
-    Surgical JS detection. Returns True only if the browser UI is hidden.
+    Enhanced JS detection. Returns True only if the browser UI is hidden 
+    AND it is a mobile device.
     """
     js_code = """
     <script>
     function check() {
-        // iOS Check
         const isiOS = window.navigator.standalone === true;
-        
-        // Android/Chrome/Desktop Check:
-        // Checking for 'standalone' display mode AND ensuring we are on a mobile device
         const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
+        // Strict mobile check
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         
-        // Final Status: Must be standalone mode AND a mobile device
-        // This prevents desktop browsers from triggering "True"
+        // Final Status: Must be in standalone mode AND on a mobile device
         const status = isiOS || (isStandaloneMode && isMobile);
         
         window.parent.postMessage({
@@ -49,16 +46,16 @@ def check_login():
     # 1. Cookie Handshake
     cookies = cookie_manager.get_all()
     if cookies is None:
-        with st.spinner("Connecting..."):
+        with st.spinner("Connecting to Swift Data Solutions..."):
             st.stop()
 
     # 2. Standalone Detection
     is_standalone_component = detect_standalone()
     
     if is_standalone_component is None:
-        if "standalone_handshake_done" not in st.session_state:
+        if "handshake_done" not in st.session_state:
             time.sleep(0.5)
-            st.session_state.standalone_handshake_done = True
+            st.session_state.handshake_done = True
             st.rerun()
     
     is_standalone = bool(is_standalone_component)
@@ -76,16 +73,14 @@ def check_login():
     if not st.session_state.logged_in:
         st.title("🍺 QSC Beer Tracker")
         
-        # --- REFINED DEBUG CONSOLE ---
+        # Connection Debug Expander
         with st.expander("🛠️ Connection Debug"):
             st.write(f"Standalone Mode Detected: **{is_standalone}**")
-            # This toggle allows you to test the login form on your PC
-            override = st.toggle("Force Login Form (For PC Testing)")
-            if st.button("Reset Everything"):
+            override = st.toggle("Force Login Form (PC Testing)")
+            if st.button("Reset Session"):
                 st.session_state.clear()
                 st.rerun()
         
-        # Use either the real check or your manual override
         show_login = is_standalone or override
 
         if not show_login:
@@ -95,7 +90,7 @@ def check_login():
             **How to install:**
             1. Tap the **Share** (iOS) or **Menu** (Android) button.
             2. Select **'Add to Home Screen'**.
-            3. Open the app from the new icon on your home screen.
+            3. Open the app from the icon on your home screen.
             """)
             st.stop()
 
@@ -113,14 +108,20 @@ def check_login():
                     if res.data:
                         user = res.data[0]
                         code = user.get('token')
-                        if not code or len(str(code)) > 6:
+                        # Check if token is 6 digits; if not, reset it
+                        if not code or len(str(code)) != 6:
                             code = str(random.randint(100000, 999999))
                             conn.table("users").update({"token": code}).eq("email", email_input).execute()
 
                         try:
+                            # Using your stored Gmail credentials
                             yag = yagmail.SMTP("justin.moulton@gmail.com", "ocsr ngmx wzla uwau")
-                            yag.send(to=email_input, subject="Beer Tracker Code", contents=f"Your code: {code}")
-                            st.success("Verification code sent!")
+                            yag.send(
+                                to=email_input, 
+                                subject="Beer Tracker Code", 
+                                contents=f"Your 6-digit access code is: {code}"
+                            )
+                            st.success("Code sent! Check your email.")
                             st.session_state.show_code_input = True
                             st.rerun()
                         except Exception as e:
@@ -128,15 +129,18 @@ def check_login():
                     else:
                         st.error("Email not found.")
         else:
-            code_in = st.text_input("6-Digit Code")
+            code_in = st.text_input("Enter 6-Digit Code")
             if st.button("Confirm and Log In"):
                 res = conn.table("users").select("*").eq("email", email_input).eq("token", code_in).execute()
                 if res.data:
                     st.session_state.user_info = res.data[0]
                     st.session_state.logged_in = True
-                    # Stick the cookie
-                    expiry = datetime.now() + timedelta(days=90)
-                    cookie_manager.set("qsc_beer_code", code_in, expires_at=expiry)
+                    
+                    # FIX: Correctly format the datetime for the cookie manager
+                    # This prevents the .isoformat() AttributeError
+                    expiry_date = datetime.now() + timedelta(days=90)
+                    cookie_manager.set("qsc_beer_code", str(code_in), expires_at=expiry_date)
+                    
                     st.rerun()
                 else:
                     st.error("Invalid code.")
