@@ -23,5 +23,3 @@ pydantic
 yarl
 yagmail
 extra-streamlit-components
-random
-datetime
