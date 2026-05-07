@@ -8,29 +8,35 @@ from extra_streamlit_components import CookieManager
 from st_supabase_connection import SupabaseConnection
 import streamlit.components.v1 as components
 
-def detect_standalone():
+def detect_browser_details():
     """
-    Enhanced JS detection. Returns True only if the browser UI is hidden 
-    AND it is a mobile device.
+    Dumps all relevant browser attributes to find a reliable standalone signature.
     """
     js_code = """
     <script>
-    function check() {
-        const isiOS = window.navigator.standalone === true;
-        const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
-        // Strict mobile check
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    function getDetails() {
+        const details = {
+            isiOSStandalone: window.navigator.standalone === true,
+            isDisplayStandalone: window.matchMedia('(display-mode: standalone)').matches,
+            isFullScreen: window.matchMedia('(display-mode: fullscreen)').matches,
+            menubarVisible: window.menubar.visible,
+            userAgent: navigator.userAgent,
+            screenWidth: window.screen.width,
+            screenHeight: window.screen.height,
+            isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+        };
         
-        // Final Status: Must be in standalone mode AND on a mobile device
-        const status = isiOS || (isStandaloneMode && isMobile);
-        
+        // Final logic: True standalone apps usually have menubar hidden 
+        // OR the specific OS standalone flags set.
+        const standaloneScore = (details.isiOSStandalone || details.isDisplayStandalone) && !details.menubarVisible;
+
         window.parent.postMessage({
             type: 'streamlit:setComponentValue',
-            value: status
+            value: { status: standaloneScore, raw: details }
         }, '*');
     }
-    check();
-    setTimeout(check, 500);
+    getDetails();
+    setTimeout(getDetails, 500);
     </script>
     """
     return components.html(js_code, height=0, width=0)
@@ -49,21 +55,26 @@ def check_login():
         with st.spinner("Connecting to Swift Data Solutions..."):
             st.stop()
 
-    # 2. Standalone Detection
-    is_standalone_component = detect_standalone()
+    # 2. Advanced Detection
+    browser_data = detect_browser_details()
     
-    if is_standalone_component is None:
+    if browser_data is None:
         if "handshake_done" not in st.session_state:
             time.sleep(0.5)
             st.session_state.handshake_done = True
             st.rerun()
     
-    is_standalone = bool(is_standalone_component)
+    # Safely parse the return object
+    is_standalone = False
+    raw_details = {}
+    if browser_data:
+        is_standalone = browser_data.get("status", False)
+        raw_details = browser_data.get("raw", {})
 
     # 3. Check for existing Cookie
     saved_code = cookies.get("qsc_beer_code")
     if saved_code and not st.session_state.logged_in:
-        res = conn.table("users").select("*").eq("token", saved_code).execute()
+        res = conn.table("users").select("*").eq("token", str(saved_code)).execute()
         if res.data:
             st.session_state.user_info = res.data[0]
             st.session_state.logged_in = True
@@ -73,11 +84,12 @@ def check_login():
     if not st.session_state.logged_in:
         st.title("🍺 QSC Beer Tracker")
         
-        # Connection Debug Expander
-        with st.expander("🛠️ Connection Debug"):
-            st.write(f"Standalone Mode Detected: **{is_standalone}**")
+        # --- THE DBA INSPECTION PANEL ---
+        with st.expander("🛠️ Browser Fingerprint (Debug Info)"):
+            st.write("**Reported Standalone:**", is_standalone)
+            st.json(raw_details) # This tells us exactly what the browser sees
             override = st.toggle("Force Login Form (PC Testing)")
-            if st.button("Reset Session"):
+            if st.button("Hard Reset Session"):
                 st.session_state.clear()
                 st.rerun()
         
@@ -86,12 +98,7 @@ def check_login():
         if not show_login:
             st.info("### 📱 Installation Required")
             st.write("To use this app, please add it to your home screen first.")
-            st.markdown("""
-            **How to install:**
-            1. Tap the **Share** (iOS) or **Menu** (Android) button.
-            2. Select **'Add to Home Screen'**.
-            3. Open the app from the icon on your home screen.
-            """)
+            st.markdown("1. Tap **Share** or **Menu**\n2. Select **'Add to Home Screen'**")
             st.stop()
 
         # --- LOGIN FORM ---
@@ -108,20 +115,14 @@ def check_login():
                     if res.data:
                         user = res.data[0]
                         code = user.get('token')
-                        # Check if token is 6 digits; if not, reset it
                         if not code or len(str(code)) != 6:
                             code = str(random.randint(100000, 999999))
                             conn.table("users").update({"token": code}).eq("email", email_input).execute()
 
                         try:
-                            # Using your stored Gmail credentials
                             yag = yagmail.SMTP("justin.moulton@gmail.com", "ocsr ngmx wzla uwau")
-                            yag.send(
-                                to=email_input, 
-                                subject="Beer Tracker Code", 
-                                contents=f"Your 6-digit access code is: {code}"
-                            )
-                            st.success("Code sent! Check your email.")
+                            yag.send(to=email_input, subject="Beer Tracker Code", contents=f"Your code: {code}")
+                            st.success("Code sent!")
                             st.session_state.show_code_input = True
                             st.rerun()
                         except Exception as e:
@@ -129,17 +130,17 @@ def check_login():
                     else:
                         st.error("Email not found.")
         else:
-            code_in = st.text_input("Enter 6-Digit Code")
-            if st.button("Confirm and Log In"):
+            code_in = st.text_input("6-Digit Code")
+            if st.button("Confirm"):
                 res = conn.table("users").select("*").eq("email", email_input).eq("token", code_in).execute()
                 if res.data:
                     st.session_state.user_info = res.data[0]
                     st.session_state.logged_in = True
                     
-                    # FIX: Correctly format the datetime for the cookie manager
-                    # This prevents the .isoformat() AttributeError
-                    expiry_date = datetime.now() + timedelta(days=90)
-                    cookie_manager.set("qsc_beer_code", str(code_in), expires_at=expiry_date)
+                    # FIX: Explicitly cast to datetime to satisfy .isoformat() requirement
+                    # Use a fixed variable name to ensure no scope issues
+                    exp_date = datetime.now() + timedelta(days=90)
+                    cookie_manager.set("qsc_beer_code", str(code_in), expires_at=exp_date)
                     
                     st.rerun()
                 else:
