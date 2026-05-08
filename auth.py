@@ -59,10 +59,18 @@ def check_login():
                         if not code or len(str(code)) != 6:
                             code = str(random.randint(100000, 999999))
                             conn.table("users").update({"token": code}).eq("email", email_input).execute()
-
+                        email_body = [
+                            f"""
+                            <p>Your code is: <strong>{code}</strong></p>
+                            
+                            <hr>
+                            
+                            <p><strong>Icon for your app:</strong><br>
+                            <a href="https://raw.githubusercontent.com/justinmoulton-pixel/qsc-beer-tracker/main/static/QSC_Beer.png">Click here to download the QSC Beer Icon</a></p>
+                            """
+                        ]
                         try:
                             # Send email
-                            email_body = f"""Your code is: <b>{code}</b><br><br><b>Icon for your app:</b><br><a href="https://raw.githubusercontent.com/justinmoulton-pixel/qsc-beer-tracker/main/static/QSC_Beer.png">Click here to download the QSC Beer Icon</a>"""
                             yag = yagmail.SMTP("justin.moulton@gmail.com", "ocsr ngmx wzla uwau")
                             yag.send(to=email_input, subject="Beer Tracker Code", contents=email_body)
                             st.success("Verification code sent! Check your inbox.")
