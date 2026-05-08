@@ -40,15 +40,15 @@ except Exception as e:
 st.markdown(f"""
  <style>
      /* Hides the top toolbar entirely */
-    header {
+    header {{
         visibility: hidden;
         display: none !important;
-     }
+     }}
         
     /* Removes any empty top spacing left behind by the hidden header */
-    .stApp {
+    .stApp {{
         margin-top: -60px;
-    }
+    }}
     /* 1. Reset App Background */
     .stApp {{
         background-color: #f4f4f2;
