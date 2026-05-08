@@ -62,15 +62,7 @@ def check_login():
 
                         try:
                             # Send email
-                            email_body = f"""
-                            Your code is: <b>{code}</b>
-                            
-                            <br><br>
-                            ---
-                            <br>
-                            <b>Icon for your app:</b><br>
-                            <a href="https://raw.githubusercontent.com/justinmoulton-pixel/qsc-beer-tracker/main/static/QSC_Beer.png">Click here to download the QSC Beer Icon</a>
-                            """
+                            email_body = f"""Your code is: <b>{code}</b><br><br><b>Icon for your app:</b><br><a href="https://raw.githubusercontent.com/justinmoulton-pixel/qsc-beer-tracker/main/static/QSC_Beer.png">Click here to download the QSC Beer Icon</a>"""
                             yag = yagmail.SMTP("justin.moulton@gmail.com", "ocsr ngmx wzla uwau")
                             yag.send(to=email_input, subject="Beer Tracker Code", contents=email_body)
                             st.success("Verification code sent! Check your inbox.")
