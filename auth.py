@@ -8,31 +8,35 @@ from extra_streamlit_components import CookieManager
 from st_supabase_connection import SupabaseConnection
 
 def check_login():
-    # 1. Immediate Session Check (Zero Latency)
+    # 1. IMMEDIATE PASS-THROUGH
+    # If already logged in this session, skip everything else entirely.
     if st.session_state.get("logged_in"):
         return st.session_state.user_info
 
+    # 2. SILENT INITIALIZATION
+    # We only initialize these if we aren't already logged in.
     cookie_manager = CookieManager()
     conn = st.connection("supabase", type=SupabaseConnection)
 
-    # 2. Silent Cookie Handshake
-    # We do NOT render anything here. No titles, no spinners.
+    # 3. THE WAIT
+    # We wait for the cookie component to report back. 
+    # We render NOTHING during this time to avoid the flicker.
     cookies = cookie_manager.get_all()
     
     if cookies is None:
-        # App stays blank for a split second while browser handles the request
-        st.stop()
+        st.stop() # Script pauses here until browser responds
 
-    # 3. Check for Saved Token
+    # 4. COOKIE VALIDATION
     saved_code = cookies.get("qsc_beer_token")
     if saved_code:
         res = conn.table("users").select("*").eq("token", str(saved_code)).execute()
         if res.data:
             st.session_state.user_info = res.data[0]
             st.session_state.logged_in = True
-            return st.session_state.user_info
+            st.rerun() # Force a rerun to hit the "Immediate Pass-Through" next time
 
-    # 4. Only if both checks fail, show the Login UI
+    # 5. UI RENDERING (The "Hard" Login)
+    # This only runs if there's no session and no valid cookie.
     st.title("🍺 QSC Beer Tracker")
 
     with st.expander("📱 How to install as an App", expanded=True):
@@ -80,7 +84,7 @@ def check_login():
                     try:
                         expire_at = datetime.now() + timedelta(days=90)
                         cookie_manager.set("qsc_beer_token", str(code_in), expires_at=expire_at)
-                        time.sleep(0.2) 
+                        time.sleep(0.5) # Give the browser a moment to write the cookie
                     except:
                         pass
                     st.rerun()
