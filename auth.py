@@ -61,11 +61,10 @@ def check_login():
                             conn.table("users").update({"token": code}).eq("email", email_input).execute()
                         email_body = [
                             f"""
-                            <p>Your code is XXX: <strong>{code}</strong></p>
+                            <p>Your code is: <strong>{code}</strong></p>
                             
                             <hr>
                             
-                            <p><strong>Icon for your app:</strong><br>
                             <a href="https://raw.githubusercontent.com/justinmoulton-pixel/qsc-beer-tracker/main/static/QSC_Beer.png">Click here to download the QSC Beer Icon</a></p>
                             """
                         ]
