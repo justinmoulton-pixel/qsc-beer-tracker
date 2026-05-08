@@ -32,7 +32,7 @@ def get_base64(bin_file):
     return base64.b64encode(data).decode()
     
 try:
-    logo_base64 = get_base64("/static/QSC_Beer.png")
+    logo_base64 = get_base64("static/QSC_Beer.png")
 except Exception as e:
     logo_base64 = ""
     
