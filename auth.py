@@ -35,9 +35,9 @@ def check_login():
         st.title("🍺 QSC Beer Tracker")
 
         # Installation instructions expander
-        with st.expander("📱 How to install as an App", expanded=True):
-            st.info("To stay logged in, add this to your home screen!")
-            st.markdown("1. **iPhone:** Tap Share -> 'Add to Home Screen'\n2. **Android:** Tap Menu -> 'Install App'")
+        #with st.expander("📱 How to install as an App", expanded=True):
+        #    st.info("To stay logged in, add this to your home screen!")
+        #    st.markdown("1. **iPhone:** Tap Share -> 'Add to Home Screen'\n2. **Android:** Tap Menu -> 'Install App'")
 
         # --- LOGIN FORM ---
         st.write("---")
