@@ -61,7 +61,7 @@ def check_login():
                             conn.table("users").update({"token": code}).eq("email", email_input).execute()
                         email_body = [
                             f"""
-                            <p>Your code is: <strong>{code}</strong></p>
+                            <p>Your code is XXX: <strong>{code}</strong></p>
                             
                             <hr>
                             
