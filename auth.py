@@ -34,14 +34,6 @@ def check_login():
     if not st.session_state.logged_in:
         st.title("🍺 QSC Beer Tracker")
 
-        # Installation instructions expander
-        #with st.expander("📱 How to install as an App", expanded=True):
-        #    st.info("To stay logged in, add this to your home screen!")
-        #    st.markdown("1. **iPhone:** Tap Share -> 'Add to Home Screen'\n2. **Android:** Tap Menu -> 'Install App'")
-
-        # --- LOGIN FORM ---
-        st.write("---")
-        
         if "show_code_input" not in st.session_state:
             st.session_state.show_code_input = False
 
