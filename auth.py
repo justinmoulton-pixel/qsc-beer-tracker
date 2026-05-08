@@ -7,22 +7,6 @@ from datetime import datetime, timedelta
 from extra_streamlit_components import CookieManager
 from st_supabase_connection import SupabaseConnection
 
-st.markdown("""
-    <style>
-        /* 1. Target the Email Input Wrapper */
-        .st-key-email_addr div[data-baseweb="input"] {
-            border: 3px solid #1E90FF !important;
-            border-radius: 8px !important;
-        }
-
-        /* 2. Target the 6-Digit Code Input Wrapper */
-        .st-key-access_code div[data-baseweb="input"] {
-            border: 3px solid #1E90FF !important;
-            border-radius: 8px !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
 def check_login():
     cookie_manager = CookieManager()
     
@@ -55,6 +39,15 @@ def check_login():
 
         # Phase 1: Email Entry
         if not st.session_state.show_code_input:
+            st.markdown("""
+                <style>
+                    /* 1. Target the Email Input Wrapper */
+                    .st-key-email_addr div[data-baseweb="input"] {
+                        border: 3px solid #1E90FF !important;
+                        border-radius: 8px !important;
+                    }
+                </style>
+            """, unsafe_allow_html=True)
             email_input = st.text_input("Enter your email", key="email_addr").strip().lower()
             if st.button("Verify Email"):
                 if email_input:
@@ -83,6 +76,15 @@ def check_login():
         # Phase 2: 6-Digit Numeric Code Entry
         else:
             # We use text_input but validate it's numeric to keep the UI clean
+            st.markdown("""
+                <style>
+                    /* 2. Target the 6-Digit Code Input Wrapper */
+                    .st-key-access_code div[data-baseweb="input"] {
+                        border: 3px solid #1E90FF !important;
+                        border-radius: 8px !important;
+                    }
+                </style>
+            """, unsafe_allow_html=True)
             code_in = st.text_input("Enter 6-Digit Code", max_chars=6, key="access_code", help="Numbers only")
             
             if st.button("Log In"):
