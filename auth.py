@@ -9,9 +9,16 @@ from st_supabase_connection import SupabaseConnection
 
 st.markdown("""
     <style>
-        div[element-type="stTextInput"]:has(input[id="access_code"]) div[data-baseweb="input"],
-        div[element-type="stTextInput"]:has(input[id="email_addr"]) div[data-baseweb="input"] {
+        /* 1. Target the Email Input Wrapper */
+        .st-key-email_addr div[data-baseweb="input"] {
             border: 3px solid #1E90FF !important;
+            border-radius: 8px !important;
+        }
+
+        /* 2. Target the 6-Digit Code Input Wrapper */
+        .st-key-access_code div[data-baseweb="input"] {
+            border: 3px solid #1E90FF !important;
+            border-radius: 8px !important;
         }
     </style>
 """, unsafe_allow_html=True)
