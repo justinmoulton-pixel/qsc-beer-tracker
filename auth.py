@@ -111,9 +111,9 @@ def check_login():
                         st.error("Invalid code. Please check your email and try again.")
             
             # Replaced "Back" button with a simple reset link to keep UI clean
-            if st.button("Restart Login"):
-                st.session_state.show_code_input = False
-                st.rerun()
+            #if st.button("Restart Login"):
+            #    st.session_state.show_code_input = False
+            #    st.rerun()
 
     if st.session_state.logged_in:
         return st.session_state.user_info
