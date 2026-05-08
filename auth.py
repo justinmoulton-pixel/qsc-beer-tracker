@@ -7,6 +7,15 @@ from datetime import datetime, timedelta
 from extra_streamlit_components import CookieManager
 from st_supabase_connection import SupabaseConnection
 
+st.markdown("""
+    <style>
+        div[element-type="stTextInput"]:has(input[id="access_code"]) div[data-baseweb="input"],
+        div[element-type="stTextInput"]:has(input[id="email_addr"]) div[data-baseweb="input"] {
+            border: 3px solid #1E90FF !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 def check_login():
     cookie_manager = CookieManager()
     
@@ -39,7 +48,7 @@ def check_login():
 
         # Phase 1: Email Entry
         if not st.session_state.show_code_input:
-            email_input = st.text_input("Enter your email").strip().lower()
+            email_input = st.text_input("Enter your email", key="email_addr").strip().lower()
             if st.button("Verify Email"):
                 if email_input:
                     res = conn.table("users").select("*").eq("email", email_input).execute()
@@ -67,7 +76,7 @@ def check_login():
         # Phase 2: 6-Digit Numeric Code Entry
         else:
             # We use text_input but validate it's numeric to keep the UI clean
-            code_in = st.text_input("Enter 6-Digit Code", max_chars=6, help="Numbers only")
+            code_in = st.text_input("Enter 6-Digit Code", max_chars=6, key="access_code", help="Numbers only")
             
             if st.button("Log In"):
                 # Check if input is numeric and the correct code
