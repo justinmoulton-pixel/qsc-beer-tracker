@@ -40,9 +40,9 @@ except Exception as e:
 st.markdown(f"""
  <style>
      /* Prevents mobile keyboard popup on selectboxes by disabling text input interaction */
-    div[data-testid="stSelectbox"] input {
+    div[data-testid="stSelectbox"] input {{
         pointer-events: none !important;
-    }
+    }}
      /* Hides the top toolbar entirely */
     header {{
         visibility: hidden;
