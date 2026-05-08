@@ -6,7 +6,24 @@ from st_supabase_connection import SupabaseConnection
 from auth import check_login
 
 # 1. Page Config & Professional Styling
-st.set_page_config(page_title="QSC Beer Tracker", page_icon="🍺", initial_sidebar_state="collapsed")
+st.set_page_config(
+    page_title="QSC Beer Tracker", 
+    page_icon="static/QSC_Beer.png"
+)
+
+def inject_pwa_meta():
+    # Since enableStaticServing is true, this path maps directly to your static folder
+    icon_path = "app/static/QSC_Beer.png" 
+    
+    st.markdown(f"""
+        <head>
+            <link rel="apple-touch-icon" sizes="180x180" href="{icon_path}">
+            <link rel="icon" type="image/png" sizes="192x192" href="{icon_path}">
+            <meta name="apple-mobile-web-app-title" content="QSC Beer">
+            <meta name="mobile-web-app-capable" content="yes">
+        </head>
+    """, unsafe_allow_html=True)
+inject_pwa_meta()
 
 # Base64 Function
 def get_base64(bin_file):
