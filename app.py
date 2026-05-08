@@ -39,6 +39,16 @@ except Exception as e:
 # Custom CSS for the QSC Green/Gold Theme
 st.markdown(f"""
  <style>
+     /* Hides the top toolbar entirely */
+    header {
+        visibility: hidden;
+        display: none !important;
+     }
+        
+    /* Removes any empty top spacing left behind by the hidden header */
+    .stApp {
+        margin-top: -60px;
+    }
     /* 1. Reset App Background */
     .stApp {{
         background-color: #f4f4f2;
