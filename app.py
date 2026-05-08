@@ -342,7 +342,7 @@ elif page == "Admin Panel":
     tab1, tab2, tab3 = st.tabs(["Player Adjustments", "Add/Remove Beer", "Expenses"])
     
     with tab1:
-        selected_user_name = st.selectbox("Select User to Adjust",options=users['name'].unique(),filter_mode=None)
+        selected_user_name = st.selectbox("Select User to Adjust",options=sorted(users['name'].unique()),filter_mode=None)
         selected_user = users[users['name'] == selected_user_name].iloc[0]
         u_beer = beer_df[beer_df['email'] == selected_user['email']]
         u_money = money_df[money_df['email'] == selected_user['email']]
