@@ -40,7 +40,6 @@ except Exception as e:
 st.markdown(f"""
  <style>
     /* --- 1. TARGET MAIN INTERFACE TEXT ONLY --- */
-    /* Only turn standard page text dark; leave buttons and native components alone */
     .stMarkdown p, .stMarkdown span, label, [data-testid="stWidgetLabel"] p {{
         color: #111111 !important;
     }}
@@ -90,8 +89,11 @@ st.markdown(f"""
     }}
 
     /* Hamburger / Popover Menu Trigger Button (☰) */
-    div[data-testid="stPopover"] > button {{
-        background-color: #fdb927 !important; /* QSC Gold */
+    div[data-testid="stPopover"] > button,
+    div[data-testid="stPopover"] > button:hover,
+    div[data-testid="stPopover"] > button:focus,
+    div[data-testid="stPopover"] > button:active {{
+        background-color: #fdb927 !important; /* Forces QSC Gold regardless of state */
         color: #1e4d2b !important;
         border: 2px solid #1e4d2b !important;
         width: 60px;
@@ -100,8 +102,7 @@ st.markdown(f"""
         font-weight: bold;
     }}
 
-    /* --- 5. FIXED POPOVER DROPDOWN MENU CARD --- */
-    /* Force the card body and wrapper to use your light app theme, clearing out dark mode black gaps */
+    /* --- 5. POPOVER DROPDOWN MENU CARD --- */
     div[data-testid="stPopoverBody"], 
     div[data-testid="stPopoverBody"] > div,
     [data-testid="stPopoverBody"] [data-testid="stVerticalBlock"] {{
@@ -115,13 +116,10 @@ st.markdown(f"""
         padding: 10px !important;
     }}
 
-    /* --- 6. ACTION BUTTONS (FORCING WHITE TEXT & OVERRIDING LABELS) --- */
-    /* Target everything inside a button container to slam white text into it */
+    /* --- 6. ACTION BUTTONS (CLEANED REMOVING EXTRA INNER BORDERS) --- */
+    /* Target the outer button for backgrounds and gold border only */
     div.stButton > button, 
-    div.stButton > button p, 
-    div.stButton > button span,
-    [data-testid="stPopoverBody"] button,
-    [data-testid="stPopoverBody"] button p {{
+    [data-testid="stPopoverBody"] button {{
         background-color: #1e4d2b !important;
         color: #ffffff !important;
         border-radius: 8px !important;
@@ -129,14 +127,28 @@ st.markdown(f"""
         font-weight: bold !important;
     }}
     
+    /* Explicitly strips borders from text containers inside the buttons */
+    div.stButton > button p, 
+    div.stButton > button span,
+    [data-testid="stPopoverBody"] button p,
+    [data-testid="stPopoverBody"] button span {{
+        color: #ffffff !important;
+        border: none !important; 
+        outline: none !important;
+        background: transparent !important;
+    }}
+    
     /* Hover state: Gold background with dark green text */
     div.stButton > button:hover, 
-    div.stButton > button:hover p,
-    [data-testid="stPopoverBody"] button:hover,
-    [data-testid="stPopoverBody"] button:hover p {{
+    [data-testid="stPopoverBody"] button:hover {{
         background-color: #fdb927 !important;
         color: #1e4d2b !important;
         border: 2px solid #1e4d2b !important;
+    }}
+    
+    div.stButton > button:hover p,
+    [data-testid="stPopoverBody"] button:hover p {{
+        color: #1e4d2b !important;
     }}
 
     /* --- 7. HTML TABLES & NATIVE STREAMLIT TABLES --- */
@@ -147,31 +159,46 @@ st.markdown(f"""
         border-radius: 10px;
         box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
         overflow: hidden;
-        border: 1px solid #cccccc !important; /* Visible outer border */
+        border: 1px solid #cccccc !important;
     }}
     
     table tr, table td, table th {{
         color: #111111 !important;
-        border: 1px solid #e0e0e0 !important; /* Visible internal grid borders */
+        border: 1px solid #e0e0e0 !important;
         padding: 10px;
     }}
     
-    /* Force Streamlit's native st.table rows to show borders and white backgrounds too */
     [data-testid="stTable"] table, [data-testid="stTable"] tr, [data-testid="stTable"] td {{
         background-color: #ffffff !important;
         color: #111111 !important;
         border: 1px solid #e0e0e0 !important;
     }}
 
-    /* --- 8. QUANTITY AND SELECT BOXES (LIGHT MODE OVERRIDES) --- */
-    /* Ensure number inputs and selection lists show up crisp and clean */
-    div[data-baseweb="input"], div[data-baseweb="select"] {{
+    /* --- 8. DROPDOWNS AND INPUT TEXT FIELDS (FORCED LIGHT MODE) --- */
+    /* Selectbox trigger wrapper and Number input styling */
+    div[data-baseweb="select"] > div, 
+    div[data-baseweb="input"] {{
         background-color: #ffffff !important;
         color: #111111 !important;
         border: 1px solid #cccccc !important;
     }}
     
-    div[data-baseweb="input"] input, div[data-baseweb="select"] div {{
+    /* Text font visibility overrides within inputs */
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] div,
+    div[data-baseweb="input"] input {{
+        color: #111111 !important;
+        -webkit-text-fill-color: #111111 !important; /* For iOS Safari dark mode support */
+    }}
+    
+    /* SVG Dropdown arrows */
+    div[data-baseweb="select"] svg {{
+        fill: #111111 !important;
+    }}
+    
+    /* Plus/Minus step icons in st.number_input */
+    div[data-baseweb="input"] button {{
+        background-color: #eeeeee !important;
         color: #111111 !important;
     }}
 
