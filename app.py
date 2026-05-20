@@ -39,8 +39,18 @@ except Exception as e:
 # Custom CSS for the QSC Green/Gold Theme
 st.markdown(f"""
  <style>
+     /* --- FORCE LIGHT MODE TEXT COLORS OVER SYSTEM DARK MODE --- */
+     html, body, [data-testid="stAppViewContainer"] {{
+         color: #111111 !important;
+     }}
+     
+     /* Forces all standard streamlit text labels, tabs, and inputs to stay dark */
+     p, p span, label, .st-emotion-cache-10trblm, [data-baseweb="tab"] {{
+         color: #111111 !important;
+     }}
+
      /* Hides the top toolbar entirely */
-    header {{
+     header {{
         visibility: hidden;
         display: none !important;
      }}
@@ -89,9 +99,9 @@ st.markdown(f"""
     }}
 
     /* 5. Standardize Headings */
-    h1 {{
+    h1, h2, h3 {{
         text-align: center !important;
-        color: #1e4d2b;
+        color: #1e4d2b !important;
         padding-top: 20px;
     }}
 
@@ -114,7 +124,7 @@ st.markdown(f"""
     /* 8. Action Buttons */
     div.stButton > button {{
         background-color: #1e4d2b;
-        color: white;
+        color: white !important;
         border-radius: 8px;
         border: 2px solid #fdb927;
         font-weight: bold;
@@ -122,12 +132,16 @@ st.markdown(f"""
     
     div.stButton > button:hover {{
         background-color: #fdb927;
-        color: #1e4d2b;
+        color: #1e4d2b !important;
     }}
 
-    /* 9. Table Styling */
+    /* 9. Table Styling & Forced Black Font Inside Tables */
+    table, table tr, table td, table th {{
+        background-color: white !important;
+        color: #111111 !important;
+    }}
+    
     table {{
-        background-color: white;
         border-radius: 10px;
         box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
     }}
