@@ -39,14 +39,13 @@ except Exception as e:
 # Custom CSS for the QSC Green/Gold Theme
 st.markdown(f"""
  <style>
-    /* --- 1. FORCE BODY TEXT DARK (WITHOUT BREAKING BUTTONS) --- */
-    /* Target only standard prose text, metrics, and data structures */
-    p, span, label, .stMarkdown, .stWrite, [data-testid="stMetricValue"] {{
+    /* --- 1. TARGET MAIN INTERFACE TEXT ONLY --- */
+    /* Only turn standard page text dark; leave buttons and native components alone */
+    .stMarkdown p, .stMarkdown span, label, [data-testid="stWidgetLabel"] p {{
         color: #111111 !important;
     }}
     
-    /* Keep heading styles clean and explicitly colored */
-    h1, h2, h3, h4, h5, h6 {{
+    h1, h2, h3, h4 {{
         text-align: center !important;
         color: #1e4d2b !important;
         padding-top: 20px;
@@ -85,12 +84,12 @@ st.markdown(f"""
         z-index: 1;
     }}
 
-    /* --- 4. SIDEBAR & NAVIGATION STYLING --- */
+    /* --- 4. SIDEBAR & NAVIGATION TRIGGER --- */
     [data-testid="stSidebar"] {{
         background-color: #1e4d2b !important;
     }}
 
-    /* Popover Trigger Button (☰) */
+    /* Hamburger / Popover Menu Trigger Button (☰) */
     div[data-testid="stPopover"] > button {{
         background-color: #fdb927 !important; /* QSC Gold */
         color: #1e4d2b !important;
@@ -101,30 +100,46 @@ st.markdown(f"""
         font-weight: bold;
     }}
 
-    /* Fix the actual popover dropdown menu body background */
-    div[data-testid="stPopoverBody"] {{
-        background-color: #f4f4f2 !important; /* Matches your app main background */
-        border: 2px solid #1e4d2b !important;
-    }}
-
-    /* --- 5. ACTION BUTTONS (RESTORE WHITE TEXT) --- */
-    /* Primary state: dark green background, crisp white text */
-    div.stButton > button {{
-        background-color: #1e4d2b !important;
-        color: #ffffff !important;
-        border-radius: 8px;
-        border: 2px solid #fdb927 !important;
-        font-weight: bold;
+    /* --- 5. FIXED POPOVER DROPDOWN MENU CARD --- */
+    /* Force the card body and wrapper to use your light app theme, clearing out dark mode black gaps */
+    div[data-testid="stPopoverBody"], 
+    div[data-testid="stPopoverBody"] > div,
+    [data-testid="stPopoverBody"] [data-testid="stVerticalBlock"] {{
+        background-color: #f4f4f2 !important;
+        color: #111111 !important;
     }}
     
-    /* Hover state: gold background, dark green text */
-    div.stButton > button:hover {{
+    div[data-testid="stPopoverBody"] {{
+        border: 2px solid #1e4d2b !important;
+        border-radius: 10px;
+        padding: 10px !important;
+    }}
+
+    /* --- 6. ACTION BUTTONS (FORCING WHITE TEXT & OVERRIDING LABELS) --- */
+    /* Target everything inside a button container to slam white text into it */
+    div.stButton > button, 
+    div.stButton > button p, 
+    div.stButton > button span,
+    [data-testid="stPopoverBody"] button,
+    [data-testid="stPopoverBody"] button p {{
+        background-color: #1e4d2b !important;
+        color: #ffffff !important;
+        border-radius: 8px !important;
+        border: 2px solid #fdb927 !important;
+        font-weight: bold !important;
+    }}
+    
+    /* Hover state: Gold background with dark green text */
+    div.stButton > button:hover, 
+    div.stButton > button:hover p,
+    [data-testid="stPopoverBody"] button:hover,
+    [data-testid="stPopoverBody"] button:hover p {{
         background-color: #fdb927 !important;
         color: #1e4d2b !important;
         border: 2px solid #1e4d2b !important;
     }}
 
-    /* --- 6. HTML TABLES (RESTORE BORDERS) --- */
+    /* --- 7. HTML TABLES & NATIVE STREAMLIT TABLES --- */
     table {{
         width: 100%;
         background-color: #ffffff !important;
@@ -132,32 +147,35 @@ st.markdown(f"""
         border-radius: 10px;
         box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
         overflow: hidden;
-        border: 1px solid #dddddd !important; /* Fine outer boundary */
+        border: 1px solid #cccccc !important; /* Visible outer border */
     }}
     
-    /* Ensure table internal cells have text colored correctly and clean horizontal borders */
     table tr, table td, table th {{
         color: #111111 !important;
-        border-bottom: 1px solid #e0e0e0 !important; /* Subtle inner row lines */
-    }}
-
-    table tr:last-child td {{
-        border-bottom: none !important; /* Clean bottom edge */
-    }}
-
-    /* --- 7. NATIVE STREAMLIT COMPONENT FIXES (TABS & SELECTBOXES) --- */
-    /* Fix tabs text color in dark mode */
-    [data-baseweb="tab"] div {{
-        color: #111111 !important;
+        border: 1px solid #e0e0e0 !important; /* Visible internal grid borders */
+        padding: 10px;
     }}
     
-    /* Fix Selectbox dropdown options visibility */
-    div[data-baseweb="popover"] ul {{
+    /* Force Streamlit's native st.table rows to show borders and white backgrounds too */
+    [data-testid="stTable"] table, [data-testid="stTable"] tr, [data-testid="stTable"] td {{
         background-color: #ffffff !important;
+        color: #111111 !important;
+        border: 1px solid #e0e0e0 !important;
+    }}
+
+    /* --- 8. QUANTITY AND SELECT BOXES (LIGHT MODE OVERRIDES) --- */
+    /* Ensure number inputs and selection lists show up crisp and clean */
+    div[data-baseweb="input"], div[data-baseweb="select"] {{
+        background-color: #ffffff !important;
+        color: #111111 !important;
+        border: 1px solid #cccccc !important;
+    }}
+    
+    div[data-baseweb="input"] input, div[data-baseweb="select"] div {{
         color: #111111 !important;
     }}
 
-    /* --- 8. MOBILE RESPONSIVENESS --- */
+    /* --- 9. MOBILE RESPONSIVENESS --- */
     @media (max-width: 600px) {{
         h1 {{
             font-size: 1.5rem !important;
