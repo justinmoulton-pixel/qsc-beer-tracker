@@ -39,32 +39,31 @@ except Exception as e:
 # Custom CSS for the QSC Green/Gold Theme
 st.markdown(f"""
  <style>
-     /* --- FORCE LIGHT MODE TEXT COLORS OVER SYSTEM DARK MODE --- */
-     html, body, [data-testid="stAppViewContainer"] {{
-         color: #111111 !important;
-     }}
-     
-     /* Forces all standard streamlit text labels, tabs, and inputs to stay dark */
-     p, p span, label, .st-emotion-cache-10trblm, [data-baseweb="tab"] {{
-         color: #111111 !important;
-     }}
+    /* --- 1. FORCE BODY TEXT DARK (WITHOUT BREAKING BUTTONS) --- */
+    /* Target only standard prose text, metrics, and data structures */
+    p, span, label, .stMarkdown, .stWrite, [data-testid="stMetricValue"] {{
+        color: #111111 !important;
+    }}
+    
+    /* Keep heading styles clean and explicitly colored */
+    h1, h2, h3, h4, h5, h6 {{
+        text-align: center !important;
+        color: #1e4d2b !important;
+        padding-top: 20px;
+    }}
 
-     /* Hides the top toolbar entirely */
-     header {{
+    /* --- 2. HIDE APP HEADER & FIX SPACING --- */
+    header {{
         visibility: hidden;
         display: none !important;
-     }}
+    }}
         
-    /* Removes any empty top spacing left behind by the hidden header */
     .stApp {{
         margin-top: -60px;
-    }}
-    /* 1. Reset App Background */
-    .stApp {{
         background-color: #f4f4f2;
     }}
 
-    /* 2. Position the Logo at the Top and make it Faint */
+    /* --- 3. BACKGROUND WATERMARK LOGO --- */
     [data-testid="stAppViewContainer"]::before {{
         content: "";
         position: absolute;
@@ -72,45 +71,26 @@ st.markdown(f"""
         left: 0;
         width: 100%;
         height: 100%;
-        
-        /* Image Data */
         background-image: url("data:image/png;base64,{logo_base64}");
         background-repeat: no-repeat;
         background-position: top center;
-        background-size: 50%; /* Adjust percentage to change logo size */
-        
-        /* FAINTNESS: 0.1 is very faint, 0.3 is clearly visible */
+        background-size: 50%;
         opacity: 0.1; 
-        
         z-index: 0;
-        pointer-events: none; /* Allows you to click buttons 'through' the image */
+        pointer-events: none;
     }}
 
-    /* 3. Ensure content sits on top of the background logo */
     [data-testid="stVerticalBlock"] {{
         position: relative;
         z-index: 1;
     }}
 
-    /* 4. Top Header Bar */
-    header[data-testid="stHeader"] {{
-        background-color: #1e4d2b !important; /* QSC Dark Green */
-        z-index: 2;
-    }}
-
-    /* 5. Standardize Headings */
-    h1, h2, h3 {{
-        text-align: center !important;
-        color: #1e4d2b !important;
-        padding-top: 20px;
-    }}
-
-    /* 6. Sidebar Styling */
+    /* --- 4. SIDEBAR & NAVIGATION STYLING --- */
     [data-testid="stSidebar"] {{
         background-color: #1e4d2b !important;
     }}
 
-    /* 7. Popover / Hamburger Menu */
+    /* Popover Trigger Button (☰) */
     div[data-testid="stPopover"] > button {{
         background-color: #fdb927 !important; /* QSC Gold */
         color: #1e4d2b !important;
@@ -121,39 +101,70 @@ st.markdown(f"""
         font-weight: bold;
     }}
 
-    /* 8. Action Buttons */
+    /* Fix the actual popover dropdown menu body background */
+    div[data-testid="stPopoverBody"] {{
+        background-color: #f4f4f2 !important; /* Matches your app main background */
+        border: 2px solid #1e4d2b !important;
+    }}
+
+    /* --- 5. ACTION BUTTONS (RESTORE WHITE TEXT) --- */
+    /* Primary state: dark green background, crisp white text */
     div.stButton > button {{
-        background-color: #1e4d2b;
-        color: white !important;
+        background-color: #1e4d2b !important;
+        color: #ffffff !important;
         border-radius: 8px;
-        border: 2px solid #fdb927;
+        border: 2px solid #fdb927 !important;
         font-weight: bold;
     }}
     
+    /* Hover state: gold background, dark green text */
     div.stButton > button:hover {{
-        background-color: #fdb927;
+        background-color: #fdb927 !important;
         color: #1e4d2b !important;
+        border: 2px solid #1e4d2b !important;
     }}
 
-    /* 9. Table Styling & Forced Black Font Inside Tables */
-    table, table tr, table td, table th {{
-        background-color: white !important;
+    /* --- 6. HTML TABLES (RESTORE BORDERS) --- */
+    table {{
+        width: 100%;
+        background-color: #ffffff !important;
+        border-collapse: collapse !important;
+        border-radius: 10px;
+        box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+        overflow: hidden;
+        border: 1px solid #dddddd !important; /* Fine outer boundary */
+    }}
+    
+    /* Ensure table internal cells have text colored correctly and clean horizontal borders */
+    table tr, table td, table th {{
+        color: #111111 !important;
+        border-bottom: 1px solid #e0e0e0 !important; /* Subtle inner row lines */
+    }}
+
+    table tr:last-child td {{
+        border-bottom: none !important; /* Clean bottom edge */
+    }}
+
+    /* --- 7. NATIVE STREAMLIT COMPONENT FIXES (TABS & SELECTBOXES) --- */
+    /* Fix tabs text color in dark mode */
+    [data-baseweb="tab"] div {{
         color: #111111 !important;
     }}
     
-    table {{
-        border-radius: 10px;
-        box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+    /* Fix Selectbox dropdown options visibility */
+    div[data-baseweb="popover"] ul {{
+        background-color: #ffffff !important;
+        color: #111111 !important;
     }}
 
-    /* 10. Mobile Responsiveness */
+    /* --- 8. MOBILE RESPONSIVENESS --- */
     @media (max-width: 600px) {{
         h1 {{
             font-size: 1.5rem !important;
             white-space: nowrap !important;
         }}
         [data-testid="stAppViewContainer"]::before {{
-            background-size: 80%; /* Larger logo on mobile screens */
+            background-size: 80%;
         }}
     }}
  </style>
