@@ -88,11 +88,10 @@ st.markdown(f"""
         background-color: #1e4d2b !important;
     }}
 
-    /* Target every structural element of the popover button to kill the dark mode black background */
     div[data-testid="stPopover"] > button,
     div[data-testid="stPopover"] > button *, 
     div[data-testid="stPopover"] button[id^="bttn-"] {{
-        background-color: #fdb927 !important; /* QSC Gold */
+        background-color: #fdb927 !important; 
         color: #1e4d2b !important;
         -webkit-text-fill-color: #1e4d2b !important;
     }}
@@ -177,7 +176,6 @@ st.markdown(f"""
     }}
 
     /* --- 8. INPUT WIDGETS HARD OVERRIDES (SELECTBOX & NUMBER INPUT) --- */
-    /* Deeply target Streamlit containers to blast out the forced dark backgrounds */
     .stSelectbox div[data-baseweb="select"],
     .stSelectbox div[data-baseweb="select"] *,
     .stNumberInput div[data-baseweb="input"],
@@ -187,24 +185,36 @@ st.markdown(f"""
         -webkit-text-fill-color: #111111 !important;
     }}
     
-    /* Ensure the inputs have visible borders and background colors */
     .stSelectbox [data-baseweb="select"], .stNumberInput [data-baseweb="input"] {{
         border: 1px solid #cccccc !important;
         background-color: #ffffff !important;
     }}
     
-    /* Plus/Minus increment buttons wrapper on number field */
     .stNumberInput div[data-baseweb="input"] button {{
         background-color: #eeeeee !important;
         color: #111111 !important;
     }}
     
-    /* Force dropdown SVG arrow colors to be visible */
     .stSelectbox svg {{
         fill: #111111 !important;
     }}
 
-    /* --- 9. MOBILE RESPONSIVENESS --- */
+    /* --- 9. NAVIGATION TABS (FORCED DARK TEXT) --- */
+    /* Target the text nodes inside the structural tab list elements */
+    .stTabs button p, 
+    .stTabs [data-baseweb="tab"], 
+    .stTabs [data-baseweb="tab"] p,
+    .stTabs [data-baseweb="tab"] span {{
+        color: #111111 !important;
+        -webkit-text-fill-color: #111111 !important;
+    }}
+    
+    /* Ensure the underline active track color stays visible */
+    .stTabs [data-baseweb="tab-highlight-bar"] {{
+        background-color: #1e4d2b !important;
+    }}
+
+    /* --- 10. MOBILE RESPONSIVENESS --- */
     @media (max-width: 600px) {{
         h1 {{
             font-size: 1.5rem !important;
