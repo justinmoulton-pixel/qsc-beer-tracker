@@ -83,18 +83,21 @@ st.markdown(f"""
         z-index: 1;
     }}
 
-    /* --- 4. SIDEBAR & NAVIGATION TRIGGER --- */
+    /* --- 4. SIDEBAR & HAMBURGER/POPOVER TRIGGER (FORCED LIGHT) --- */
     [data-testid="stSidebar"] {{
         background-color: #1e4d2b !important;
     }}
 
-    /* Hamburger / Popover Menu Trigger Button (☰) */
+    /* Target every structural element of the popover button to kill the dark mode black background */
     div[data-testid="stPopover"] > button,
-    div[data-testid="stPopover"] > button:hover,
-    div[data-testid="stPopover"] > button:focus,
-    div[data-testid="stPopover"] > button:active {{
-        background-color: #fdb927 !important; /* Forces QSC Gold regardless of state */
+    div[data-testid="stPopover"] > button *, 
+    div[data-testid="stPopover"] button[id^="bttn-"] {{
+        background-color: #fdb927 !important; /* QSC Gold */
         color: #1e4d2b !important;
+        -webkit-text-fill-color: #1e4d2b !important;
+    }}
+    
+    div[data-testid="stPopover"] > button {{
         border: 2px solid #1e4d2b !important;
         width: 60px;
         height: 45px;
@@ -116,8 +119,7 @@ st.markdown(f"""
         padding: 10px !important;
     }}
 
-    /* --- 6. ACTION BUTTONS (CLEANED REMOVING EXTRA INNER BORDERS) --- */
-    /* Target the outer button for backgrounds and gold border only */
+    /* --- 6. ACTION BUTTONS --- */
     div.stButton > button, 
     [data-testid="stPopoverBody"] button {{
         background-color: #1e4d2b !important;
@@ -127,18 +129,17 @@ st.markdown(f"""
         font-weight: bold !important;
     }}
     
-    /* Explicitly strips borders from text containers inside the buttons */
     div.stButton > button p, 
     div.stButton > button span,
     [data-testid="stPopoverBody"] button p,
     [data-testid="stPopoverBody"] button span {{
         color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
         border: none !important; 
         outline: none !important;
         background: transparent !important;
     }}
     
-    /* Hover state: Gold background with dark green text */
     div.stButton > button:hover, 
     [data-testid="stPopoverBody"] button:hover {{
         background-color: #fdb927 !important;
@@ -149,6 +150,7 @@ st.markdown(f"""
     div.stButton > button:hover p,
     [data-testid="stPopoverBody"] button:hover p {{
         color: #1e4d2b !important;
+        -webkit-text-fill-color: #1e4d2b !important;
     }}
 
     /* --- 7. HTML TABLES & NATIVE STREAMLIT TABLES --- */
@@ -174,32 +176,32 @@ st.markdown(f"""
         border: 1px solid #e0e0e0 !important;
     }}
 
-    /* --- 8. DROPDOWNS AND INPUT TEXT FIELDS (FORCED LIGHT MODE) --- */
-    /* Selectbox trigger wrapper and Number input styling */
-    div[data-baseweb="select"] > div, 
-    div[data-baseweb="input"] {{
+    /* --- 8. INPUT WIDGETS HARD OVERRIDES (SELECTBOX & NUMBER INPUT) --- */
+    /* Deeply target Streamlit containers to blast out the forced dark backgrounds */
+    .stSelectbox div[data-baseweb="select"],
+    .stSelectbox div[data-baseweb="select"] *,
+    .stNumberInput div[data-baseweb="input"],
+    .stNumberInput div[data-baseweb="input"] * {{
         background-color: #ffffff !important;
         color: #111111 !important;
+        -webkit-text-fill-color: #111111 !important;
+    }}
+    
+    /* Ensure the inputs have visible borders and background colors */
+    .stSelectbox [data-baseweb="select"], .stNumberInput [data-baseweb="input"] {{
         border: 1px solid #cccccc !important;
+        background-color: #ffffff !important;
     }}
     
-    /* Text font visibility overrides within inputs */
-    div[data-baseweb="select"] span,
-    div[data-baseweb="select"] div,
-    div[data-baseweb="input"] input {{
-        color: #111111 !important;
-        -webkit-text-fill-color: #111111 !important; /* For iOS Safari dark mode support */
-    }}
-    
-    /* SVG Dropdown arrows */
-    div[data-baseweb="select"] svg {{
-        fill: #111111 !important;
-    }}
-    
-    /* Plus/Minus step icons in st.number_input */
-    div[data-baseweb="input"] button {{
+    /* Plus/Minus increment buttons wrapper on number field */
+    .stNumberInput div[data-baseweb="input"] button {{
         background-color: #eeeeee !important;
         color: #111111 !important;
+    }}
+    
+    /* Force dropdown SVG arrow colors to be visible */
+    .stSelectbox svg {{
+        fill: #111111 !important;
     }}
 
     /* --- 9. MOBILE RESPONSIVENESS --- */
