@@ -106,14 +106,21 @@ def check_login():
                     if res.data:
                         st.session_state.user_info = res.data[0]
                         st.session_state.logged_in = True
-                        
-                        # Set the 90-day cookie
+
+                        # Set the 90-day cookie with specific iOS ITP bypass flags
                         try:
                             expire_at = datetime.now() + timedelta(days=90)
-                            cookie_manager.set("qsc_beer_token", str(code_in), expires_at=expire_at)
-                            time.sleep(0.2) 
+                            cookie_manager.set(
+                                "qsc_beer_token", 
+                                str(code_in), 
+                                expires_at=expire_at,
+                                same_site="none",  # Crucial for iframe/Streamlit component compatibility
+                                secure=True        # Required when same_site is set to "none"
+                            )
+                            time.sleep(0.5) # Slightly longer sleep ensures the iframe completes the write on mobile network latency
                         except:
                             pass
+
                         st.rerun()
                     else:
                         st.error("Invalid code. Please check your email and try again.")
